@@ -1,4 +1,5 @@
 .Rproj.user
 *.Rproj
+.idea/workspace*.xml
 .Rhistory
 .RData
