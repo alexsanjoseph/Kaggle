@@ -2,7 +2,7 @@ import pandas as pd
 import zipfile
 import matplotlib.pyplot as pl
 
-drive = '/home/alex/Learning/Kaggle-Data/SF-Crime/'
+drive = '/home/alex/Learning/'
 z = zipfile.ZipFile(drive+'train.csv.zip')
 print(z.namelist())
 
