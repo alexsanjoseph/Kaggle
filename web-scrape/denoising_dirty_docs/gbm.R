@@ -60,7 +60,7 @@ lines(d1$raw[dat$thresholded == 1], d1$y[dat$thresholded == 1], col = "red", typ
 
 # fit a model to a subset of the data
 rows = sample(nrow(dat), 100000)
-gbm.mod = gbm(y ~ raw + thresholded, data = dat[rows,], n.trees = 500, cv.folds = 10, train.fraction = 0.5)
+gbm.mod = gbm(y ~ raw + thresholded, data = dat[rows,], n.trees = 3000, cv.folds = 10, train.fraction = 0.5)
 best.iter <- gbm.perf(gbm.mod,method="cv")
 
 # what score do we get on the training data?
