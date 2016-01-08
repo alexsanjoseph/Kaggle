@@ -1,11 +1,13 @@
 # libraries
+library("dplyr")
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(png, raster, data.table, gbm)
+
+img2vec = . %>% matrix(nrow(.) * ncol(.), 1)
 
 # a function to do k-means thresholding
 kmeansThreshold = function(img)
 {
-  browser()
   # fit 3 clusters
   v = img2vec(img)
   km.mod = kmeans(v, 3)
@@ -28,6 +30,8 @@ outFolder = "../Data/Kaggle/denoising_dirty/train_predicted"
 
 outPath = file.path(outFolder, "trainingdata.csv")
 filenames = list.files(dirtyFolder)
+unlink(outPath)
+
 for (f in filenames)
 {
   print(f)
@@ -40,7 +44,7 @@ for (f in filenames)
   
   # threshold the image
   x2 = kmeansThreshold(imgX)
-  x2 = matrix(x2, nrow(x2) * ncol(x2), 1)
+  # x2 = matrix(x2, nrow(x2) * ncol(x2), 1)
   
   dat = data.table(cbind(y, x, x2))
   setnames(dat,c("y", "raw", "thresholded"))
@@ -56,19 +60,10 @@ lines(d1$raw[dat$thresholded == 1], d1$y[dat$thresholded == 1], col = "red", typ
 
 # fit a model to a subset of the data
 rows = sample(nrow(dat), 100000)
-gbm.mod = gbm(y ~ raw + thresholded, data = dat[rows,], n.trees = 5000, cv.folds = 10, train.fraction = 0.5)
+gbm.mod = gbm(y ~ raw + thresholded, data = dat[rows,], n.trees = 500, cv.folds = 10, train.fraction = 0.5)
 best.iter <- gbm.perf(gbm.mod,method="cv")
 
 # what score do we get on the training data?
 yHat = predict(gbm.mod, newdata=dat, n.trees = best.iter)
 rmse = sqrt(mean( (yHat - dat$y) ^ 2 ))
 print(rmse)
-
-# show the predicted result for a sample image
-img = readPNG("C:\\Users\\Colin\\Kaggle\\Denoising Dirty Documents\\data\\train\\6.png")
-x = data.table(matrix(img, nrow(img) * ncol(img), 1), kmeansThreshold(img))
-setnames(x, c("raw", "thresholded"))
-yHat = predict(gbm.mod, newdata=x, n.trees = best.iter)
-imgOut = matrix(yHat, nrow(img), ncol(img))
-writePNG(imgOut, "C:\\Users\\Colin\\Kaggle\\Denoising Dirty Documents\\data\\sample.png")
-plot(raster(imgOut))
