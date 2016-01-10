@@ -1,5 +1,10 @@
 # libraries
 library("dplyr")
+
+#install necessary ubuntu libraries
+# sudo apt-get install fftw3 fftw3-dev pkg-config
+# sudo apt-get install libtiff5-dev              
+
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(png, raster, data.table, gbm, foreach, doSNOW)
 
@@ -8,8 +13,9 @@ if (!require("EBImage"))
   source("http://bioconductor.org/biocLite.R")
   biocLite("EBImage")
 }
+library(EBImage)
 
-Image2Mat = . %>% t(matrix(., nrow(.), ncol(.)))
+Image2Mat = . %>% matrix(., nrow(.), ncol(.)) %>% t
 img2vec = . %>% matrix(nrow(.) * ncol(.), 1)
 
 # a function to do k-means thresholding
@@ -31,19 +37,12 @@ kmeansThreshold = function(img)
   return (imgHi)
 }
 
-dirtyFolder = "../Data/Kaggle/denoising_dirty/train"
-cleanFolder = "../Data/Kaggle/denoising_dirty/train_cleaned"
-outFolder = "../Data/Kaggle/denoising_dirty/train_predicted"
-
-outPath = file.path(outFolder, "trainingdata.csv")
-filenames = list.files(dirtyFolder)
-unlink(outPath)
 
 
 # a function that applies adaptive thresholding
 adaptiveThresholding = function(img)
 {
-  img.eb &lt;- Image(t(img))
+  img.eb <- Image(t(img))
   img.thresholded.3 = thresh(img.eb, 3, 3)
   img.thresholded.5 = thresh(img.eb, 5, 5)
   img.thresholded.7 = thresh(img.eb, 7, 7)
@@ -58,8 +57,18 @@ adaptiveThresholding = function(img)
   return (ttt.3)
 }
 
+dirtyFolder = "../Data/Kaggle/denoising_dirty/train"
+cleanFolder = "../Data/Kaggle/denoising_dirty/train_cleaned"
+outFolder = "../Data/Kaggle/denoising_dirty/train_predicted"
+
 outPath = file.path(outFolder, "trainingdata.csv")
 filenames = list.files(dirtyFolder)
+unlink(outPath)
+
+outPath = file.path(outFolder, "trainingdata.csv")
+filenames = list.files(dirtyFolder)
+f = filenames[1]
+
 for (f in filenames)
 {
   print(f)
@@ -87,8 +96,8 @@ dat = read.csv(outPath)
 # fit a model to a subset of the data
 set.seed(1)
 rows = sample(nrow(dat), 1000000)
-gbm.mod = gbm(y ~ raw + thresholded + adaptive, data = dat[rows,], n.trees = 7500, cv.folds = 3, train.fraction = 0.5, interaction.depth = 5)
-best.iter &lt;- gbm.perf(gbm.mod,method="cv",oobag.curve = FALSE)
+gbm.mod = gbm(y ~ raw + thresholded + adaptive, data = dat[rows,], n.trees = 1500, cv.folds = 3, train.fraction = 0.5, interaction.depth = 5)
+best.iter <- gbm.perf(gbm.mod,method="cv",oobag.curve = FALSE)
 
 s = summary(gbm.mod)
 
@@ -108,10 +117,10 @@ rmse = sqrt(mean( (yHat - dat$y) ^ 2 ))
 print(rmse)
 
 # show the predicted result for a sample image
-img = readPNG("C:\\Users\\Colin\\dropbox\\Kaggle\\Denoising Dirty Documents\\data\\train\\3.png")
+img = readPNG("../Data/Kaggle/denoising_dirty/train/3.png")
 x = data.table(matrix(img, nrow(img) * ncol(img), 1), kmeansThreshold(img), img2vec(adaptiveThresholding(img)))
 setnames(x, c("raw", "thresholded", "adaptive"))
 yHat = predict(gbm.mod, newdata=x, n.trees = best.iter)
 imgOut = matrix(yHat, nrow(img), ncol(img))
-writePNG(imgOut, "C:\\Users\\Colin\\dropbox\\Kaggle\\Denoising Dirty Documents\\data\\sample.png")
+writePNG(imgOut, "../Data/Kaggle/denoising_dirty/data/sample.png")
 plot(raster(imgOut))
