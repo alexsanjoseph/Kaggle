@@ -81,3 +81,68 @@ cannyDilated2 = function(img)
   img.dilation.2 = imgBinaryDilation(img.erosion.2, mask)
   return(matrix(img.dilation.2 / 255, nrow(img), ncol(img)))
 }
+
+##### 5. background removal
+background_Removal = function(img)
+{
+  w = 5
+  
+  # the background is found via a median filter
+  background = median_Filter(img, w)
+  
+  # the foreground is darker than the background
+  foreground = img - background
+  foreground[foreground > 0] = 0
+  m1 = min(foreground)
+  m2 = max(foreground)
+  foreground = (foreground - m1) / (m2 - m1)
+  
+  return (matrix(foreground, nrow(img), ncol(img)))
+}
+
+median_Filter = function(img, filterWidth)
+{
+  pad = floor(filterWidth / 2)
+  padded = matrix(NA, nrow(img) + 2 * pad, ncol(img) + 2 * pad)
+  padded[pad + seq_len(nrow(img)), pad + seq_len(ncol(img))] = img
+  
+  tab = NULL
+  for (i in seq_len(filterWidth))
+  {
+    for (j in seq_len(filterWidth))
+    {
+      if (i == 1 && j == 1)
+      {
+        tab = img2vec(padded[i - 1 + seq_len(nrow(img)), j - 1 + seq_len(ncol(img))])
+      } else {
+        tab = cbind(tab, img2vec(padded[i - 1 + seq_len(nrow(img)), j - 1 + seq_len(ncol(img))]))
+      }
+    }
+  }
+  
+  filtered = unlist(apply(tab, 1, function(x) median(x[!is.na(x)])))
+  return (matrix(filtered, nrow(img), ncol(img)))
+}
+
+### Proximal pixels
+# a function that groups together the pixels contained within a sliding window around each pixel of interest
+proximalPixels = function(img)
+{
+  pad = 2
+  width = 2 * pad + 1
+  padded = matrix(median(img), nrow(img) + 2 * pad, ncol(img) + 2 * pad)
+  padded[pad + seq_len(nrow(img)), pad + seq_len(ncol(img))] = img
+  
+  tab = matrix(1, nrow(img) * ncol(img), width ^ 2)
+  k = 1
+  for (i in seq_len(width))
+  {
+    for (j in seq_len(width))
+    {
+      tab[,k] = img2vec(padded[i - 1 + seq_len(nrow(img)), j - 1 + seq_len(ncol(img))])
+      k = k + 1
+    }
+  }
+  
+  return (tab)
+}

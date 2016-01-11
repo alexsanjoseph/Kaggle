@@ -81,12 +81,12 @@ rmse = sqrt(mean( (yHat - dat$y) ^ 2 ))
 print(rmse) # 4.1%
 
 # show the predicted result for a sample image
-img = readPNG("C:\\Users\\Colin\\dropbox\\Kaggle\\Denoising Dirty Documents\\data\\train\\3.png")
+img = readPNG("../Data/Kaggle/denoising_dirty/train/3.png")
 x = data.table(matrix(img, nrow(img) * ncol(img), 1), kmeansThreshold(img), img2vec(adaptiveThresholding(img)), img2vec(cannyEdges(img)), img2vec(cannyDilated1(img)), img2vec(cannyDilated2(img)))
 setnames(x, c("raw", "thresholded", "adaptive", "canny", "cannyDilated1", "cannyDilated2"))
 yHatImg = predict(gbm.mod, newdata=x, n.trees = best.iter)
 yHatImg[yHatImg < 0] = 0
 yHatImg[yHatImg > 1] = 1
 imgOut = matrix(yHatImg, nrow(img), ncol(img))
-writePNG(imgOut, "C:\\Users\\Colin\\dropbox\\Kaggle\\Denoising Dirty Documents\\data\\sample.png")
+writePNG(imgOut, "../Data/Kaggle/denoising_dirty/data/sample.png")
 plot(raster(imgOut))
