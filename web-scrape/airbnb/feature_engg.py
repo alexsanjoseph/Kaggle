@@ -17,8 +17,6 @@ from sklearn.cross_validation import StratifiedShuffleSplit
 
 print('Loading raw data...')
 train_users_path='../Data/kaggle/airbnb/train_users_2.csv'
-
-print train_users_path
 test_users_path='../Data/kaggle/airbnb/test_users.csv'
 sessions_path='../Data/kaggle/airbnb/sessions.csv'
 
