@@ -1,6 +1,6 @@
 
 most_common <- function(data){
   data_sorted = sort(table(data), decreasing = T)
-  # paste(data_sorted[1:5], names(data_sorted[1:5]), sep = "-", collapse = " ")
-  names(data_sorted)[1]
+  paste(head(names(data_sorted), 5), sep = "-", collapse = " ")
+  # names(data_sorted)[1]
 }
