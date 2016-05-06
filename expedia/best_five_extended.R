@@ -8,77 +8,46 @@ test_data = fread("../Data/kaggle/expedia/test.csv")
 train_data = fread("../Data/kaggle/expedia/train.csv")
 
 ##### Data Leak
-train_data_subset = train_data[1:100000,]
-
+test_data_subset = test_data #[1:10000]
+train_data_subset = train_data #[user_id %in% test_data_subset$user_id]
 # Using the full data leak
-setkeyv(train_data_subset, c('user_location_country', 'user_location_region', 'user_location_city', 'hotel_market', 'orig_destination_distance'))
+leak_columns = list(c('user_id', 'user_location_country', 'user_location_region',
+                      'user_location_city', 'hotel_market', 'orig_destination_distance'),
+                    c('user_location_country', 'user_location_region',
+                      'user_location_city', 'hotel_market', 'orig_destination_distance'),
+                    c('user_location_country', 'user_location_region',
+                      'user_location_city', 'hotel_market'),
+                    c('user_location_country', 'user_location_region',
+                      'user_location_city', 'orig_destination_distance'),
+                    c('user_location_country', 'user_location_region',
+                      'user_location_city'),
+                    c('user_location_country', 'user_location_region',
+                      'hotel_market'),
+                    c('user_location_country', 'user_location_region',
+                      'orig_destination_distance'),
+                    c('user_location_country', 'user_location_region'),
+                    c('user_location_country'))
 
-head(train_data_subset)
+submission = NULL
+l = leak_columns[[1]]
 
-system.time({
-  hotel_cluster_obs = train_data_subset[ , list(most_common = most_common(hotel_cluster)), by = key(train_data_subset)] 
-})
+for(l in leak_columns){
+  print(l)
+  setkeyv(train_data_subset, l)
+  system.time({
+    hotel_cluster_obs = train_data_subset[ , list(most_common = most_common(hotel_cluster)), by = key(train_data_subset)] 
+  })
+  output_leak_n = test_data_subset %>% merge(hotel_cluster_obs, by = key(hotel_cluster_obs), all.x = F)
+  submission = submission %>% rbind(output_leak_n)
+  test_data_subset = test_data_subset %>% subset(!(test_data_subset$id %in% submission$id))
+}
 
-output_leak_1 = test_data %>% merge(hotel_cluster_obs, by = key(hotel_cluster_obs), all.x = F)
-
-test_non_leak = test_data %>% subset(!(id %in% output_leak_1$id))
-
-# Using a smaller grouping variable excluding the orig_dest_distance to see if that gets us anywhere
-train_data_subset = train_data
-
-setkeyv(train_data_subset, c('user_location_country', 'user_location_region', 'user_location_city', 'hotel_market'))
-
-system.time({
-  hotel_cluster_obs = train_data_subset[ , list(most_common = most_common(hotel_cluster)), by = key(train_data_subset)] 
-})
-
-output_leak_2 = test_non_leak %>% merge(hotel_cluster_obs, by = key(hotel_cluster_obs), all.x = F)
-test_non_leak = test_data %>% subset(!(id %in% c(output_leak_1$id, output_leak_2$id)))
-
-# Using a smaller grouping variable excluding the orig_dest_distance to see if that gets us anywhere
-setkeyv(train_data_subset, c('user_location_country', 'user_location_region', 'hotel_market'))
-
-system.time({
-  hotel_cluster_obs = train_data_subset[ , list(most_common = most_common(hotel_cluster)), by = key(train_data_subset)] 
-})
-
-output_leak_3 = test_non_leak %>% merge(hotel_cluster_obs, by = key(hotel_cluster_obs), all.x = F)
-test_non_leak = test_data %>% subset(!(id %in% c(output_leak_1$id, output_leak_2$id, output_leak_3$id)))
-
-# Using a smaller grouping variable excluding the orig_dest_distance to see if that gets us anywhere
-setkeyv(train_data_subset, c('user_location_country', 'user_location_region', 'user_location_city'))
-
-system.time({
-  hotel_cluster_obs = train_data_subset[ , list(most_common = most_common(hotel_cluster)), by = key(train_data_subset)] 
-})
-
-output_leak_4 = test_non_leak %>% merge(hotel_cluster_obs, by = key(hotel_cluster_obs), all.x = F)
-test_non_leak = test_data %>% subset(!(id %in% c(output_leak_1$id, output_leak_2$id, output_leak_3$id, output_leak_4$id)))
-
-# Using a smaller grouping variable excluding the orig_dest_distance to see if that gets us anywhere
-setkeyv(train_data_subset, c('user_location_country', 'user_location_region'))
-
-system.time({
-  hotel_cluster_obs = train_data_subset[ , list(most_common = most_common(hotel_cluster)), by = key(train_data_subset)] 
-})
-
-output_leak_5 = test_non_leak %>% merge(hotel_cluster_obs, by = key(hotel_cluster_obs), all.x = F)
-test_non_leak = test_data %>% subset(!(id %in% c(output_leak_1$id, output_leak_2$id,
-                                                 output_leak_3$id, output_leak_4$id,
-                                                 output_leak_5$id)))
-
-test_non_leak$most_common = best_five
-
-submission = output_leak_1 %>% 
-  rbind(output_leak_2) %>% rbind(output_leak_3) %>% rbind(output_leak_4) %>% rbind(output_leak_5) %>% 
-  rbind(test_non_leak) %>% 
+test_data_subset$most_common = "91 41 48 64 65"
+submission_final = submission %>% rbind(test_data_subset) %>% 
   select(id, hotel_cluster = most_common) %>% 
-  # mutate(hotel_cluster = replace(hotel_cluster, is.na(hotel_cluster), best_five)) %>% 
   arrange(id)
 
-head(train_data)
-
-z <- gzfile("../Data/kaggle/expedia/submissions/sub6.csv.gz")
-write.csv(submission, z, row.names = F)
+z <- gzfile("../Data/kaggle/expedia/submissions/sub8.csv.gz")
+write.csv(submission_final, z, row.names = F)
 
                                                                   
