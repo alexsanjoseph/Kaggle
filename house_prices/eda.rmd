@@ -1,0 +1,257 @@
+--
+
+title: "EDA"
+
+author: "mohsin"
+
+date: "27 November 2016"
+
+output:
+
+  html_document: default
+
+  pdf_document: default
+
+---
+
+```{r, include=FALSE}
+
+library(dplyr)
+
+library(ggplot2)
+
+```
+
+```{r}
+
+train_data <- read.csv("~/Learning/Data/kaggle/house_prices/train.csv")
+
+str(train_data)
+
+calc_corr <- function(var_data){
+
+  indices <- sapply(var_data, function(x) !is.na(x))
+
+  clean_data <- var_data[indices]
+
+  prices <- train_data$SalePrice[indices]
+
+  cor(clean_data, prices)
+
+}
+
+hist_category <- function(var_data) {
+
+  ggplot(data.frame(var_data), aes(x=var_data)) + geom_bar()
+
+}
+
+summary_category <- function(var_data){
+
+  cat(paste0("levels : ", levels(var_data), "\n"))
+
+  hist_category(var_data)
+
+  ggplot(train_data, aes(x=var_data, y=SalePrice)) + geom_boxplot()
+
+}
+
+plot_price_vs_var <- function(var_data){
+
+  ggplot(train_data, aes(x = var_data, y=SalePrice)) +geom_point()
+
+}
+
+summary_cont <- function(var_data){
+
+  cat("summary is ")
+
+  cat(summary(var_data))
+
+  boxplot(var_data)
+
+  # Correlation with the price
+
+  cat("Correlation with the sale price is ",calc_corr(var_data))
+
+}
+
+```
+
+## Univariate analysis
+
+1) ID -lite
+
+### 2) MSSubClass : The building class
+
+```{r}
+
+factor_mssubclass_levels <- as.factor(train_data$MSSubClass)
+
+levels(factor_mssubclass_levels)
+
+ggp <- ggplot(data.frame(factor_mssubclass_levels) , aes(x=factor_mssubclass_levels))
+
+ggp + geom_bar()
+
+ggplot(train_data, aes(x=factor_mssubclass_levels, y=SalePrice)) + geom_boxplot()
+
+```
+
+The data is not uniformly distributed
+
+3) MSZoning : The general zoning classification
+
+```{r}
+
+levels(train_data$MSZoning)
+
+ggplot(data.frame(train_data$MSZoning), aes(x=train_data$MSZoning)) + geom_bar()
+
+ggplot(train_data, aes(x=MSZoning, y=SalePrice)) + geom_boxplot()
+
+```
+
+### 3) Lot Frontage
+
+```{r}
+
+summary(train_data$LotFrontage)
+
+boxplot(train_data$LotFrontage)
+
+ggplot(train_data, aes(x = LotFrontage, y=SalePrice)) +geom_point()
+
+# Correlation with the price
+
+calc_corr(train_data$LotFrontage)
+
+```
+
+### 4) Lot area : Linear feet of street connected to property
+
+```{r, include=FALSE}
+
+summary(train_data$LotArea)
+
+ggplot(train_data, aes(x = LotArea, y=SalePrice)) +geom_point()
+
+boxplot(train_data$LotArea)
+
+# Correlation with the price
+
+calc_corr(train_data$LotArea)
+
+```
+
+```{r}
+
+plot_price_vs_var(train_data$LotArea)
+
+summary_cont(train_data$LotArea)
+
+```
+
+### 5) Street : Type of road access
+
+```{r}
+
+hist_category(train_data$Street)
+
+summary_category(train_data$Street)
+
+```
+
+I think that the above varibale can be removed as no entropy is there in the data
+
+### 6) Alley: Type of alley access
+
+```{r}
+
+var_data <- train_data$Alley
+
+hist_category(var_data)
+
+summary_category(var_data)
+
+```
+
+Again not required as we have lot of NAs
+
+### 7) LotShape: General shape of property
+
+```{r}
+
+var_data <- train_data$LotShape
+
+hist_category(var_data)
+
+summary_category(var_data)
+
+```
+
+### 8) LandContour: Flatness of the property
+
+```{r}
+
+var_data <- train_data$LandContour
+
+hist_category(var_data)
+
+summary_category(var_data)
+
+```
+
+### 9) Utilities: Type of utilities available
+
+```{r}
+
+var_data <- train_data$Utilities
+
+hist_category(var_data)
+
+summary_category(var_data)
+
+```
+
+This can also be removed as no entropy in the data
+
+### 10) LotConfig: Lot configuration
+
+```{r}
+
+var_data <- train_data$LotConfig
+
+hist_category(var_data)
+
+summary_category(var_data)
+
+```
+
+This can also be removed as no entropy in the data
+
+### 11) LandSlope: Slope of property
+
+```{r}
+
+var_data <- train_data$LandSlope
+
+hist_category(var_data)
+
+summary_category(var_data)
+
+```
+
+This can also be removed as no entropy in the data
+
+### 12) Neighborhood: Physical locations within Ames city limits
+
+```{r}
+
+var_data <- train_data$Neighborhood
+
+hist_category(var_data)
+
+summary_category(var_data)
+
+```

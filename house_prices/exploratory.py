@@ -8,25 +8,46 @@ from ggplot import *
 import seaborn as sns
 # import xgboost as xgb
 
-test_data_final  = pd.read_csv("../../Data/kaggle/house_prices/test.csv")
-test_sub   = pd.read_csv("../../Data/kaggle/house_prices/sample_submission.csv")
+def plot_category(train_data, current_column, output_column = 'SalePrice'):
+    plot_df = train_data.groupby(current_column).agg({output_column: 'mean'})
+    plot_df.reset_index(level=0, inplace=True)
+    return ggplot(plot_df, aes(x = current_column, weight = output_column)) + geom_bar(stat = "identity") 
 
-#numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
-train_data = pd.read_csv("../../Data/kaggle/house_prices/train.csv")
+
+
+test_data_final  = pd.read_csv("~/Learning/Data/kaggle/house_prices/test.csv")
+test_sub   = pd.read_csv("~/Learning/Data/kaggle/house_prices/sample_submission.csv")
+
+train_data = pd.read_csv("~/Learning/Data/kaggle/house_prices/train.csv")
 
 #train_data.columns.values
 
 
 # Exploratory
 current_column = 'LotArea'
-plot_df = train_data[[current_column, 'SalePrice']]
+ggplot(train_data, aes(x = current_column, y = 'SalePrice')) + geom_point()
 
-ggplot(plot_df, aes(x = current_column, y = 'SalePrice')) + geom_point() + xlim(0,35000)
-# sns.lmplot(current_column, 'SalePrice', plot_df, fit_reg=False)
+plot_category(train_data, 'MSSubClass')
+plot_category(train_data, 'LotShape')
+plot_category(train_data, 'Utilities')
+plot_category(train_data, 'Neighborhood')
+plot_category(train_data, 'OverallQual')
+plot_category(train_data, 'Heating')
+plot_category(train_data, 'OverallCond')
+plot_category(train_data, 'OverallCond')
+plot_category(train_data, 'OverallCond')
 
-print lm
+ggplot(train_data, aes(x = 'YearRemodAdd', y = 'SalePrice')) + geom_point() 
+ggplot(train_data, aes(x = 'GrLivArea', y = 'SalePrice')) + geom_point() 
+
+?linear_model.LinearRegressio
+regr = linear_model.LinearRegression()
+regr.fit(train_data.drop('SalePrice', axis=1), train_data[['SalePrice']])
 
 # Modeling
+numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
+train_data = train_data.select_dtypes(include=numerics)
+
 train_data = train_data.select_dtypes(include=numerics)
 train_data.fillna(train_data.mean(), inplace = True)
 
@@ -39,6 +60,8 @@ test_data_Y = test_data[['SalePrice']]
 
 regr = linear_model.LinearRegression()
 regr.fit(train_data_X, train_data_Y)
+regr.score()
+
 
 print('Coefficients: \n', regr.coef_)
 
