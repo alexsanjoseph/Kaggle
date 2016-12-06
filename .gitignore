@@ -3,3 +3,5 @@
 .idea/workspace*.xml
 .Rhistory
 .RData
+.*
+!/.gitignore
