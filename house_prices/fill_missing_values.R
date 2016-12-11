@@ -69,26 +69,19 @@ all_miss = list(zero = impute_test_imputed_naive_zero,
                        missF = impute_test_imputed_missForest_df,
                        mi = impute_test_imputed_mi_df,
                        actual = impute_test)
-ensemble = (all_miss[2:7] %>% Reduce('+', .))/6
-
-
-errors = data.frame(
-  zero = missForest::nrmse(impute_test_imputed_naive_zero, impute_test_missing, impute_test),
-  mean = missForest::nrmse(impute_test_imputed_naive_mean, impute_test_missing, impute_test),
-  mice = missForest::nrmse(impute_test_imputed_mice_df, impute_test_missing, impute_test),
-  amelia = missForest::nrmse(impute_test_imputed_amelia_df, impute_test_missing, impute_test),
-  missF = missForest::nrmse(impute_test_imputed_missForest_df, impute_test_missing, impute_test),
-  mi = missForest::nrmse(impute_test_imputed_mi_df, impute_test_missing, impute_test),
-  actual = missForest::nrmse(impute_test, impute_test_missing, impute_test)) %>% round(3)
-errors
+all_miss$ensemble = (all_miss[4:6] %>% Reduce('+', .))/3
+errors = sapply(all_miss, missForest::nrmse, impute_test_missing, impute_test) %>% round(4)
 
 current_var = 'LotFrontage'
 missing_indices = which(is.na(impute_test_missing[[current_var]]))
-missing_data_df = data.frame(zero = 0,
-                             mean = impute_test_imputed_naive_mean[[current_var]][missing_indices],
-                             mice = impute_test_imputed_mice_df[[current_var]][missing_indices],
-                             amelia = impute_test_imputed_amelia_df[[current_var]][missing_indices],
-                             missF = impute_test_imputed_missForest_df[[current_var]][missing_indices],
-                             mi = impute_test_imputed_mi_df[[current_var]][missing_indices],
-                             actual = impute_test[[current_var]][missing_indices]
-                             )
+missing_data_df = lapply(all_miss, function(x) x[[current_var]][missing_indices]) %>% do.call(cbind, .) %>% data.frame
+names(missing_data_df) = names(all_miss)
+
+# missing_data_df = data.frame(zero = 0,
+#                              mean = impute_test_imputed_naive_mean[[current_var]][missing_indices],
+#                              mice = impute_test_imputed_mice_df[[current_var]][missing_indices],
+#                              amelia = impute_test_imputed_amelia_df[[current_var]][missing_indices],
+#                              missF = impute_test_imputed_missForest_df[[current_var]][missing_indices],
+#                              mi = impute_test_imputed_mi_df[[current_var]][missing_indices],
+#                              actual = impute_test[[current_var]][missing_indices]
+#                              )
