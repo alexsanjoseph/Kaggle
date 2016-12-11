@@ -29,7 +29,6 @@ impute_test_imputed_naive_zero <- lapply(impute_test_missing, function(x){
 }) %>% data.frame()
 find_impute_performance(impute_test_imputed_naive_zero, impute_test) %>% sum
 
-
 # Naive means
 impute_test_imputed_naive_mean <- lapply(impute_test_missing, function(x){
   x[is.na(x)] = mean(x, na.rm = T)
@@ -39,18 +38,57 @@ find_impute_performance(impute_test_imputed_naive_mean, impute_test) %>% sum
 
 ## Mice
 impute_test_imputed_mice <- mice::mice(impute_test_missing, m = 5, maxit = 50, method = 'pmm', seed = 500)
-sapply(1:5, function(i) find_impute_performance(complete(impute_test_imputed_mice,i), impute_test) %>% sum)
+impute_test_imputed_mice_df = (lapply(1:5, function(i) complete(impute_test_imputed_mice, i)) %>% Reduce('+', .))/5
+find_impute_performance(impute_test_imputed_mice_df, impute_test) %>% sum
+
 
 ## Amelia
 impute_test_imputed_amelia = Amelia::amelia(impute_test_missing, m=5, parallel = "multicore")
-sapply(1:5, function(i) find_impute_performance(impute_test_imputed_amelia$imputations[[i]], impute_test) %>% sum)
+impute_test_imputed_amelia_df = (impute_test_imputed_amelia$imputations %>% Reduce('+', .))/5
+find_impute_performance(impute_test_imputed_amelia_df, impute_test) %>% sum
 
 ## missForest
 impute_test_imputed_missForest <- missForest::missForest(impute_test_missing)
-find_impute_performance(impute_test_imputed_missForest$ximp, impute_test) %>% sum
+impute_test_imputed_missForest_df = impute_test_imputed_missForest$ximp
+find_impute_performance(impute_test_imputed_missForest_df, impute_test) %>% sum
 
 ## mi
-impute_test_imputed_mi <- mi::mi(impute_test_missing)
-find_impute_performance(impute_test_imputed_mi %>% data.frame, impute_test) %>% sum
+impute_test_missing_mi <- mi::missing_data.frame(impute_test_missing)
+impute_test_imputed_mi <- mi::mi(impute_test_missing_mi)
+impute_test_imputed_mi = mi::complete(impute_test_imputed_mi, 5)
+impute_test_imputed_mi_df =  (lapply(impute_test_imputed_mi, function(x)
+  lapply(x, as.numeric) %>% data.frame() %>% vimana::round_num_cols(4)
+  ) %>% Reduce('+', .) %>% select(-starts_with("missing_")))/5
 
-A = impute_test_imputed_mi %>% as.data.frame
+find_impute_performance(impute_test_imputed_mi_df, impute_test) %>% sum
+
+all_miss = list(zero = impute_test_imputed_naive_zero,
+                       mean = impute_test_imputed_naive_mean,
+                       mice = impute_test_imputed_mice_df,
+                       amelia = impute_test_imputed_amelia_df,
+                       missF = impute_test_imputed_missForest_df,
+                       mi = impute_test_imputed_mi_df,
+                       actual = impute_test)
+ensemble = (all_miss[2:7] %>% Reduce('+', .))/6
+
+
+errors = data.frame(
+  zero = missForest::nrmse(impute_test_imputed_naive_zero, impute_test_missing, impute_test),
+  mean = missForest::nrmse(impute_test_imputed_naive_mean, impute_test_missing, impute_test),
+  mice = missForest::nrmse(impute_test_imputed_mice_df, impute_test_missing, impute_test),
+  amelia = missForest::nrmse(impute_test_imputed_amelia_df, impute_test_missing, impute_test),
+  missF = missForest::nrmse(impute_test_imputed_missForest_df, impute_test_missing, impute_test),
+  mi = missForest::nrmse(impute_test_imputed_mi_df, impute_test_missing, impute_test),
+  actual = missForest::nrmse(impute_test, impute_test_missing, impute_test)) %>% round(3)
+errors
+
+current_var = 'LotFrontage'
+missing_indices = which(is.na(impute_test_missing[[current_var]]))
+missing_data_df = data.frame(zero = 0,
+                             mean = impute_test_imputed_naive_mean[[current_var]][missing_indices],
+                             mice = impute_test_imputed_mice_df[[current_var]][missing_indices],
+                             amelia = impute_test_imputed_amelia_df[[current_var]][missing_indices],
+                             missF = impute_test_imputed_missForest_df[[current_var]][missing_indices],
+                             mi = impute_test_imputed_mi_df[[current_var]][missing_indices],
+                             actual = impute_test[[current_var]][missing_indices]
+                             )
