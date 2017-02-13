@@ -17,6 +17,12 @@ train_raw_numeric = train_raw[sapply(train_raw, is.numeric)]
 train_raw_numeric_miss <- missForest::missForest(train_raw_numeric)
 train_full = train_raw_numeric_miss$ximp
 
+# Doing feature selection
+boruta_output = Boruta::Boruta(SalePrice ~ ., data = train_full, doTrace = 2)
+final.boruta <- TentativeRoughFix(boruta_output)
+select_columns = getSelectedAttributes(final.boruta, withTentative = F)
+train_full = train_full %>% select_(.dots = select_columns, "SalePrice")
+
 # Creating train and cross validation datasets
 index <- sample(1:nrow(train_full),round(0.8*nrow(train_full)))
 train_data <- train_full[index,]
@@ -41,7 +47,7 @@ test_ <- scaled[-index,]
 library(neuralnet)
 n <- names(train_)
 f <- as.formula(paste("SalePrice ~", paste(n[!n %in% "SalePrice"], collapse = " + ")))
-nn <- neuralnet(f, data = train_,hidden = c(15,5), linear.output=T)
+nn <- neuralnet(f, data = train_,hidden = c(), linear.output=T)
 
 plot(nn)
 
@@ -53,4 +59,23 @@ test.r <- (test_$SalePrice)*(max(train_full$SalePrice)-min(train_full$SalePrice)
 
 MSE.nn <- sum((test.r - pr.nn_)^2)/nrow(test_)
 
-print(paste(MSE.lm,MSE.nn))
+sqrt(c(MSE.lm,MSE.nn))
+
+# Plotting the values
+par(mfrow=c(1,2))
+
+plot(cv_data$SalePrice,pr.nn_,col='red',main='Real vs predicted NN',pch=18,cex=0.7)
+abline(0,1,lwd=2)
+legend('bottomright',legend='NN',pch=18,col='red', bty='n')
+
+plot(cv_data$SalePrice,pr.lm,col='blue',main='Real vs predicted lm',pch=18, cex=0.7)
+abline(0,1,lwd=2)
+legend('bottomright',legend='LM',pch=18,col='blue', bty='n', cex=.95)
+
+# Cross Validation
+library(boot)
+set.seed(200)
+lm.fit <- glm(SalePrice~.,data=train_full)
+cv.glm(train_full,lm.fit,K=10)$delta[1] / 1e9
+
+
