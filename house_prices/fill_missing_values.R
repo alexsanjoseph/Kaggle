@@ -14,6 +14,14 @@ test_raw <- read.csv(file.path(DATA.DIR,"test.csv"), stringsAsFactors = FALSE)
 # Only continuous variables for evaluation
 train_raw_numeric = train_raw[sapply(train_raw, is.numeric)]
 
+# Maybe do normalization?
+
+
+## collinear
+# train_raw_numeric$TotalBsmtSF[1] = 855
+# A = lm(SalePrice ~ .,train_raw_numeric)
+# summary(A)
+
 # Finding collinear variables
 Amelia::amelia(train_raw_numeric, m=5, parallel = "multicore")
 train_raw_numeric = train_raw_numeric %>% select(-TotalBsmtSF, -GrLivArea)
@@ -31,24 +39,25 @@ find_impute_performance(impute_test_imputed_naive_zero, impute_test) %>% sum
 
 # Naive means
 impute_test_imputed_naive_mean <- lapply(impute_test_missing, function(x){
-  x[is.na(x)] = mean(x, na.rm = T)
+  x[is.na(x)] = median(x, na.rm = T)
   x
 }) %>% data.frame()
 find_impute_performance(impute_test_imputed_naive_mean, impute_test) %>% sum
 
 ## Mice
-impute_test_imputed_mice <- mice::mice(impute_test_missing, m = 5, maxit = 50, method = 'pmm', seed = 500)
-impute_test_imputed_mice_df = (lapply(1:5, function(i) complete(impute_test_imputed_mice, i)) %>% Reduce('+', .))/5
+impute_test_imputed_mice <- mice::mice(impute_test_missing, m = 15, maxit = 50, method = 'pmm', seed = 500)
+impute_test_imputed_mice_df = (lapply(1:10, function(i) complete(impute_test_imputed_mice, i)) %>% Reduce('+', .))/10
+
 find_impute_performance(impute_test_imputed_mice_df, impute_test) %>% sum
 
-
 ## Amelia
-impute_test_imputed_amelia = Amelia::amelia(impute_test_missing, m=5, parallel = "multicore")
-impute_test_imputed_amelia_df = (impute_test_imputed_amelia$imputations %>% Reduce('+', .))/5
+impute_test_imputed_amelia = Amelia::amelia(impute_test_missing, m=25, parallel = "multicore")
+impute_test_imputed_amelia_df = (impute_test_imputed_amelia$imputations %>% Reduce('+', .))/25
 find_impute_performance(impute_test_imputed_amelia_df, impute_test) %>% sum
 
 ## missForest
-impute_test_imputed_missForest <- missForest::missForest(impute_test_missing)
+impute_test_imputed_missForest <- missForest::missForest(impute_test_missing, maxiter = 10, ntree = 500)
+?missForest::missForest
 impute_test_imputed_missForest_df = impute_test_imputed_missForest$ximp
 find_impute_performance(impute_test_imputed_missForest_df, impute_test) %>% sum
 
